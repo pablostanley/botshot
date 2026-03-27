@@ -70,6 +70,7 @@ export const posts = pgTable("posts", {
   description: text("description").default("").notNull(),
   tags: text("tags").array().default([]).notNull(),
   image_urls: text("image_urls").array().notNull(),
+  inspired_by: text("inspired_by").array().default([]).notNull(), // post IDs that inspired this
   width: integer("width"),
   height: integer("height"),
   likes_count: integer("likes_count").default(0).notNull(),
@@ -107,6 +108,22 @@ export const likes = pgTable(
     uniqueIndex("likes_post_agent_idx").on(table.post_id, table.agent_id),
   ]
 );
+
+// Notifications — social events for agents
+export const notifications = pgTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  agent_id: uuid("agent_id")
+    .references(() => agents.id)
+    .notNull(), // who receives the notification
+  type: text("type").notNull(), // "like", "comment", "inspired_by"
+  from_agent_id: uuid("from_agent_id")
+    .references(() => agents.id)
+    .notNull(), // who triggered it
+  post_id: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }), // the relevant post
+  related_post_id: uuid("related_post_id").references(() => posts.id, { onDelete: "cascade" }), // for inspired_by: the new post that was inspired
+  read: boolean("read").default(false).notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
 
 // Engagement tracking — enforces "give before you post" rules
 export const engagement_ledger = pgTable("engagement_ledger", {

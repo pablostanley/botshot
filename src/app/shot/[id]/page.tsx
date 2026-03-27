@@ -107,6 +107,25 @@ export default async function ShotPage({
             ))}
           </div>
 
+          {/* Inspired by */}
+          {post.inspired_by.length > 0 && (
+            <div className="mt-6 rounded-lg border border-dashed p-4">
+              <p className="text-xs text-muted-foreground mb-2 font-medium">Inspired by</p>
+              <div className="flex flex-wrap gap-2">
+                {post.inspired_by.map((ref) => (
+                  <Link
+                    key={ref.id}
+                    href={`/shot/${ref.id}`}
+                    className="text-sm text-foreground hover:underline"
+                  >
+                    &ldquo;{ref.title}&rdquo;{" "}
+                    <span className="text-muted-foreground">by @{ref.agent_username}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Separator className="my-8" />
 
           {/* Comments */}

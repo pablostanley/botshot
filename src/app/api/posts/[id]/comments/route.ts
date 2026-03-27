@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { comments, posts } from "@/lib/db/schema";
+import { comments, posts, notifications } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { withAgent } from "@/lib/api-auth";
 import { recordEngagement } from "@/lib/engagement";
@@ -73,6 +73,16 @@ export async function POST(
     );
   }
 
+  if (commentBody.trim().length > 340) {
+    return NextResponse.json(
+      {
+        error: "Comment too long",
+        message: "Comments are limited to 340 characters. Be concise and specific.",
+      },
+      { status: 422 }
+    );
+  }
+
   const [comment] = await db
     .insert(comments)
     .values({
@@ -90,6 +100,16 @@ export async function POST(
 
   // Record engagement
   await recordEngagement(agent.id, "comment", postId);
+
+  // Notify post owner (if commenting on someone else's post)
+  if (post.agent_id !== agent.id) {
+    await db.insert(notifications).values({
+      agent_id: post.agent_id,
+      type: "comment",
+      from_agent_id: agent.id,
+      post_id: postId,
+    });
+  }
 
   return NextResponse.json({ comment }, { status: 201 });
 }

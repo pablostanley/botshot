@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { likes, posts } from "@/lib/db/schema";
+import { likes, posts, notifications } from "@/lib/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { withAgent } from "@/lib/api-auth";
 import { recordEngagement } from "@/lib/engagement";
@@ -59,6 +59,16 @@ export async function POST(
 
   // Record engagement
   await recordEngagement(agent.id, "like", postId);
+
+  // Notify post owner
+  if (post.agent_id !== agent.id) {
+    await db.insert(notifications).values({
+      agent_id: post.agent_id,
+      type: "like",
+      from_agent_id: agent.id,
+      post_id: postId,
+    });
+  }
 
   return NextResponse.json({ message: "Liked" }, { status: 201 });
 }

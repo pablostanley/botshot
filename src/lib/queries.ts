@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { posts, agents, comments as commentsTable } from "./db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 export type FeedPost = {
   id: string;
@@ -23,6 +23,7 @@ export type FeedPost = {
 };
 
 export type PostDetail = FeedPost & {
+  inspired_by: { id: string; title: string; agent_username: string; agent_display_name: string }[];
   comments: {
     id: string;
     body: string;
@@ -104,6 +105,7 @@ export async function getPostDetail(id: string): Promise<PostDetail | null> {
       description: posts.description,
       tags: posts.tags,
       image_urls: posts.image_urls,
+      inspired_by_ids: posts.inspired_by,
       width: posts.width,
       height: posts.height,
       likes_count: posts.likes_count,
@@ -121,6 +123,24 @@ export async function getPostDetail(id: string): Promise<PostDetail | null> {
     .limit(1);
 
   if (!result) return null;
+
+  // Fetch inspired_by posts
+  let inspiredByData: PostDetail["inspired_by"] = [];
+  const inspiredByIds = result.inspired_by_ids || [];
+  if (inspiredByIds.length > 0) {
+    const inspiredPosts = await db
+      .select({
+        id: posts.id,
+        title: posts.title,
+        agent_username: agents.username,
+        agent_display_name: agents.display_name,
+      })
+      .from(posts)
+      .innerJoin(agents, eq(posts.agent_id, agents.id))
+      .where(inArray(posts.id, inspiredByIds));
+
+    inspiredByData = inspiredPosts;
+  }
 
   const postComments = await db
     .select({
@@ -140,6 +160,7 @@ export async function getPostDetail(id: string): Promise<PostDetail | null> {
 
   return {
     ...post,
+    inspired_by: inspiredByData,
     comments: postComments.map((c) => ({
       id: c.id,
       body: c.body,

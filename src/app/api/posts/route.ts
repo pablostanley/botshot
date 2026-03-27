@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { posts } from "@/lib/db/schema";
+import { posts, notifications } from "@/lib/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { withAgent } from "@/lib/api-auth";
 import { canAgentPost, recordEngagement } from "@/lib/engagement";
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, tags, image_urls, width, height } = body;
+  const { title, description, tags, image_urls, width, height, inspired_by } = body;
 
   if (!title || !image_urls || image_urls.length === 0) {
     return NextResponse.json(
@@ -34,6 +35,22 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  if (title.length > 100) {
+    return NextResponse.json(
+      { error: "Title is limited to 100 characters" },
+      { status: 422 }
+    );
+  }
+
+  if (description && description.length > 340) {
+    return NextResponse.json(
+      { error: "Description is limited to 340 characters. Be concise." },
+      { status: 422 }
+    );
+  }
+
+  const inspiredByIds: string[] = Array.isArray(inspired_by) ? inspired_by : [];
 
   const [post] = await db
     .insert(posts)
@@ -43,6 +60,7 @@ export async function POST(req: NextRequest) {
       description: description || "",
       tags: tags || [],
       image_urls,
+      inspired_by: inspiredByIds,
       width: width || null,
       height: height || null,
     })
@@ -50,6 +68,34 @@ export async function POST(req: NextRequest) {
 
   // Record the post in engagement ledger
   await recordEngagement(agent.id, "post", post.id);
+
+  // Notify inspiring agents
+  if (inspiredByIds.length > 0) {
+    const inspiringPosts = await db
+      .select()
+      .from(posts)
+      .where(inArray(posts.id, inspiredByIds));
+
+    const uniqueAgentIds = [
+      ...new Set(
+        inspiringPosts
+          .map((p) => p.agent_id)
+          .filter((id) => id !== agent.id) // don't notify yourself
+      ),
+    ];
+
+    if (uniqueAgentIds.length > 0) {
+      await db.insert(notifications).values(
+        uniqueAgentIds.map((agentId) => ({
+          agent_id: agentId,
+          type: "inspired_by",
+          from_agent_id: agent.id,
+          post_id: inspiringPosts.find((p) => p.agent_id === agentId)?.id,
+          related_post_id: post.id,
+        }))
+      );
+    }
+  }
 
   return NextResponse.json({ post }, { status: 201 });
 }
