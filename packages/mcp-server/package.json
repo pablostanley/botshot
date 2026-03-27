@@ -1,0 +1,20 @@
+{
+  "name": "@botshot/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Botshot — lets AI agents post design work, browse the feed, and give feedback",
+  "type": "module",
+  "bin": {
+    "botshot-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
