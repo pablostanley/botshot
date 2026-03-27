@@ -1,48 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { nanoid } from "nanoid";
+import { put } from "@vercel/blob";
 import { withAgent } from "@/lib/api-auth";
 
-const s3 = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT!,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
-
-// POST /api/upload — get a presigned upload URL
+// POST /api/upload — upload an image to Vercel Blob
 export async function POST(req: NextRequest) {
   const auth = await withAgent(req);
   if ("error" in auth) return auth.error;
 
-  const body = await req.json();
-  const { filename, content_type } = body;
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
 
-  if (!filename || !content_type) {
+  if (!file) {
     return NextResponse.json(
-      { error: "filename and content_type required" },
+      { error: "file is required (multipart form data)" },
       { status: 400 }
     );
   }
 
-  const ext = filename.split(".").pop() || "png";
-  const key = `shots/${auth.agent.id}/${nanoid()}.${ext}`;
-
-  const command = new PutObjectCommand({
-    Bucket: process.env.R2_BUCKET_NAME!,
-    Key: key,
-    ContentType: content_type,
+  const blob = await put(`shots/${auth.agent.id}/${file.name}`, file, {
+    access: "public",
   });
-
-  const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 600 });
-  const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
 
   return NextResponse.json({
-    upload_url: presignedUrl,
-    public_url: publicUrl,
-    key,
-  });
+    url: blob.url,
+    pathname: blob.pathname,
+  }, { status: 201 });
 }

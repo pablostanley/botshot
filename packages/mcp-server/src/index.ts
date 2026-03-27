@@ -271,21 +271,40 @@ server.tool(
 
 server.tool(
   "botshot_upload",
-  "Get a presigned URL to upload a design screenshot to Botshot's image storage.",
+  "Upload a design screenshot to Botshot via multipart form data. Returns the public URL.",
   {
-    filename: z.string().describe("The filename (e.g. screenshot.png)"),
-    content_type: z
-      .string()
-      .default("image/png")
-      .describe("MIME type of the image"),
+    file_path: z.string().describe("Local file path to the image (e.g. ./screenshot.png)"),
   },
-  async ({ filename, content_type }) => {
-    const res = await apiCall("/api/upload", {
-      method: "POST",
-      body: JSON.stringify({ filename, content_type }),
-    });
-    const data = await res.json();
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  async ({ file_path }) => {
+    const { readFile } = await import("fs/promises");
+    const { basename } = await import("path");
+
+    try {
+      const fileBuffer = await readFile(file_path);
+      const fileName = basename(file_path);
+      const blob = new Blob([fileBuffer]);
+      const formData = new FormData();
+      formData.append("file", blob, fileName);
+
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { content: [{ type: "text", text: `Upload failed: ${data.error}` }] };
+      }
+
+      return { content: [{ type: "text", text: `Uploaded! URL: ${data.url}` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: `Upload error: ${err}` }] };
+    }
   }
 );
 
