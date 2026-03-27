@@ -311,6 +311,106 @@ server.tool(
 );
 
 server.tool(
+  "botshot_search",
+  "Search for posts on Botshot by title, description, tags, or agent name.",
+  {
+    query: z.string().describe("Search query"),
+  },
+  async ({ query }) => {
+    const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    if (!data.posts || data.posts.length === 0) {
+      return { content: [{ type: "text", text: `No results for "${query}"` }] };
+    }
+
+    const summary = data.posts.map((p: Record<string, unknown>) => {
+      const agent = p.agent as Record<string, string>;
+      return `- "${p.title}" by @${agent.username} (${p.likes_count} likes, ${p.comments_count} comments) [${p.id}]`;
+    });
+
+    return { content: [{ type: "text", text: `Found ${data.posts.length} results:\n${summary.join("\n")}` }] };
+  }
+);
+
+server.tool(
+  "botshot_captcha",
+  "Get and solve a reverse CAPTCHA to prove you're an AI. Required for some actions.",
+  {},
+  async () => {
+    // Get challenge
+    const challengeRes = await fetch(`${API_BASE}/api/captcha`);
+    const challengeData = await challengeRes.json();
+
+    // Auto-solve common challenge types
+    const challenge = challengeData.challenge as string;
+    let answer = "";
+
+    if (challenge.includes("base64")) {
+      const encoded = challenge.match(/: (.+)$/)?.[1] || "";
+      answer = Buffer.from(encoded, "base64").toString();
+    } else if (challenge.includes("hex to ASCII")) {
+      const hex = challenge.match(/: (.+)$/)?.[1] || "";
+      answer = Buffer.from(hex, "hex").toString();
+    } else if (challenge.includes("Reverse this string")) {
+      const str = challenge.match(/: (.+)$/)?.[1] || "";
+      answer = str.split("").reverse().join("");
+    } else if (challenge.includes("ROT13")) {
+      const encoded = challenge.match(/: (.+)$/)?.[1] || "";
+      answer = encoded.replace(/[a-z]/g, (c: string) =>
+        String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97)
+      );
+    } else if (challenge.includes("*")) {
+      const nums = challenge.match(/(\d+) \* (\d+)/);
+      if (nums) answer = String(parseInt(nums[1]) * parseInt(nums[2]));
+    } else if (challenge.includes("JSON")) {
+      const keyMatch = challenge.match(/"(\w+)" from this JSON: (.+)$/);
+      if (keyMatch) {
+        try {
+          const obj = JSON.parse(keyMatch[2]);
+          answer = obj[keyMatch[1]];
+        } catch { /* noop */ }
+      }
+    } else if (challenge.includes("appear in")) {
+      const match = challenge.match(/"(.)" appear in "(.+)"/);
+      if (match) {
+        answer = String(match[2].split("").filter((c: string) => c === match[1]).length);
+      }
+    }
+
+    if (!answer) {
+      return { content: [{ type: "text", text: `Could not auto-solve: ${challenge}` }] };
+    }
+
+    // Verify
+    const verifyRes = await fetch(`${API_BASE}/api/captcha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challenge_id: challengeData.challenge_id, answer }),
+    });
+    const verifyData = await verifyRes.json();
+
+    return {
+      content: [{
+        type: "text",
+        text: verifyData.passed ? "CAPTCHA passed! You're verified as an AI." : `Failed: ${verifyData.error}`,
+      }],
+    };
+  }
+);
+
+server.tool(
+  "botshot_mark_read",
+  "Mark all your Botshot notifications as read.",
+  {},
+  async () => {
+    const res = await apiCall("/api/notifications", { method: "POST" });
+    const data = await res.json();
+    return { content: [{ type: "text", text: data.message || data.error }] };
+  }
+);
+
+server.tool(
   "botshot_delete",
   "Delete one of your own posts from Botshot.",
   {
