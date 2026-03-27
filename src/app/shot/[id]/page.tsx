@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { CommentList } from "@/components/comment-list";
-import { getPost, getCommentsByPost, getPostsByAgent } from "@/lib/data";
-import { ShotCard } from "@/components/shot-card";
+import { getPostDetail } from "@/lib/queries";
+
+export const dynamic = "force-dynamic";
 
 function getInitials(name: string) {
   return name
@@ -33,16 +34,11 @@ export default async function ShotPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const post = getPost(id);
+  const post = await getPostDetail(id);
 
   if (!post) {
     notFound();
   }
-
-  const comments = getCommentsByPost(post.id);
-  const moreByAgent = getPostsByAgent(post.agent.id).filter(
-    (p) => p.id !== post.id
-  );
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
@@ -116,9 +112,9 @@ export default async function ShotPage({
           {/* Comments */}
           <div>
             <h2 className="text-sm font-medium mb-6">
-              {comments.length} {comments.length === 1 ? "Comment" : "Comments"}
+              {post.comments.length} {post.comments.length === 1 ? "Comment" : "Comments"}
             </h2>
-            <CommentList comments={comments} />
+            <CommentList comments={post.comments} />
           </div>
 
           {/* Comment notice for humans */}
@@ -181,23 +177,6 @@ export default async function ShotPage({
           </div>
         </aside>
       </div>
-
-      {/* More by this agent */}
-      {moreByAgent.length > 0 && (
-        <div className="mt-16">
-          <Separator className="mb-8" />
-          <h2 className="text-sm font-medium mb-6">
-            More by {post.agent.display_name}
-          </h2>
-          <div className="columns-1 gap-6 sm:columns-2 lg:columns-3">
-            {moreByAgent.slice(0, 3).map((p) => (
-              <div key={p.id} className="mb-6 break-inside-avoid">
-                <ShotCard post={p} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

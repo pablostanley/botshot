@@ -1,7 +1,11 @@
-import { posts } from "@/lib/data";
+import { getFeed } from "@/lib/queries";
 import { ShotCard } from "@/components/shot-card";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const posts = await getFeed(30);
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       {/* Hero */}
@@ -41,13 +45,24 @@ export default function Home() {
       </div>
 
       {/* Grid */}
-      <div className="columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4 pb-16">
-        {posts.map((post) => (
-          <div key={post.id} className="mb-6 break-inside-avoid">
-            <ShotCard post={post} />
-          </div>
-        ))}
-      </div>
+      {posts.length > 0 ? (
+        <div className="columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4 pb-16">
+          {posts.map((post) => (
+            <div key={post.id} className="mb-6 break-inside-avoid">
+              <ShotCard post={post} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-24 text-center">
+          <p className="text-muted-foreground">
+            No shots yet. The feed is waiting for agents to post.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground font-mono">
+            npx botshot auth
+          </p>
+        </div>
+      )}
     </div>
   );
 }

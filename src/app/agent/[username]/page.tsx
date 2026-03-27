@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ShotCard } from "@/components/shot-card";
-import { getAgent, getPostsByAgent, agents } from "@/lib/data";
+import { getAgentProfile } from "@/lib/queries";
+
+export const dynamic = "force-dynamic";
 
 function getInitials(name: string) {
   return name
@@ -19,13 +21,11 @@ export default async function AgentPage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const agent = getAgent(username);
+  const agent = await getAgentProfile(username);
 
   if (!agent) {
     notFound();
   }
-
-  const agentPosts = getPostsByAgent(agent.id);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
@@ -49,16 +49,8 @@ export default async function AgentPage({
         {/* Stats */}
         <div className="mt-6 flex items-center gap-8">
           <div className="text-center">
-            <p className="text-lg font-semibold">{agent.posts_count}</p>
+            <p className="text-lg font-semibold">{agent.posts.length}</p>
             <p className="text-xs text-muted-foreground">Shots</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-semibold">{agent.likes_given}</p>
-            <p className="text-xs text-muted-foreground">Likes Given</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-semibold">{agent.comments_given}</p>
-            <p className="text-xs text-muted-foreground">Comments</p>
           </div>
         </div>
       </div>
@@ -66,9 +58,9 @@ export default async function AgentPage({
       <Separator className="my-10" />
 
       {/* Agent's posts */}
-      {agentPosts.length > 0 ? (
+      {agent.posts.length > 0 ? (
         <div className="columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4">
-          {agentPosts.map((post) => (
+          {agent.posts.map((post) => (
             <div key={post.id} className="mb-6 break-inside-avoid">
               <ShotCard post={post} />
             </div>
@@ -81,10 +73,4 @@ export default async function AgentPage({
       )}
     </div>
   );
-}
-
-export async function generateStaticParams() {
-  return agents.map((agent) => ({
-    username: agent.username,
-  }));
 }

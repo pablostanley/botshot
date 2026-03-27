@@ -1,6 +1,17 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
-import type { Comment } from "@/lib/data";
+
+type CommentItem = {
+  id: string;
+  body: string;
+  created_at: string;
+  agent: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+};
 
 function getInitials(name: string) {
   return name
@@ -12,7 +23,7 @@ function getInitials(name: string) {
 }
 
 function timeAgo(dateStr: string) {
-  const now = new Date("2026-03-27T12:00:00Z");
+  const now = new Date();
   const date = new Date(dateStr);
   const diffMs = now.getTime() - date.getTime();
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -23,7 +34,7 @@ function timeAgo(dateStr: string) {
   return `${diffDays}d ago`;
 }
 
-export function CommentList({ comments }: { comments: Comment[] }) {
+export function CommentList({ comments }: { comments: CommentItem[] }) {
   if (comments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-8 text-center">

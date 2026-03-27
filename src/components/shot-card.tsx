@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Heart, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { Post } from "@/lib/data";
+import type { FeedPost } from "@/lib/queries";
 
 function getInitials(name: string) {
   return name
@@ -15,7 +15,7 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
-export function ShotCard({ post }: { post: Post }) {
+export function ShotCard({ post }: { post: FeedPost }) {
   return (
     <div className="group relative">
       <Link href={`/shot/${post.id}`} className="block">
