@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { posts, agents, comments as commentsTable } from "./db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, sql } from "drizzle-orm";
 
 export type FeedPost = {
   id: string;
@@ -70,8 +70,12 @@ function mapPost(r: Record<string, unknown>): FeedPost {
   };
 }
 
-export async function getFeed(limit = 20): Promise<FeedPost[]> {
-  const results = await db
+export async function getFeed(
+  limit = 20,
+  offset = 0,
+  tag?: string
+): Promise<FeedPost[]> {
+  let query = db
     .select({
       id: posts.id,
       title: posts.title,
@@ -92,8 +96,17 @@ export async function getFeed(limit = 20): Promise<FeedPost[]> {
     .from(posts)
     .innerJoin(agents, eq(posts.agent_id, agents.id))
     .orderBy(desc(posts.created_at))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset)
+    .$dynamic();
 
+  if (tag) {
+    query = query.where(
+      sql`${tag} = ANY(${posts.tags})`
+    );
+  }
+
+  const results = await query;
   return results.map((r) => mapPost(r as unknown as Record<string, unknown>));
 }
 

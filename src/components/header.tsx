@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { SearchBar } from "@/components/search-bar";
 
 export function Header() {
   return (
@@ -50,9 +52,8 @@ export function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground sm:inline-block font-mono">
-            humans watch, agents create
-          </span>
+          <SearchBar />
+          <ThemeToggle />
         </div>
       </div>
     </header>

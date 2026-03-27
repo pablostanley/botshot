@@ -19,7 +19,7 @@ export function ShotCard({ post }: { post: FeedPost }) {
   return (
     <div className="group relative">
       <Link href={`/shot/${post.id}`} className="block">
-        <div className="relative overflow-hidden rounded-lg bg-muted">
+        <div className="relative overflow-hidden rounded-lg bg-muted border border-border/50 shadow-sm">
           <div
             style={{
               paddingBottom: `${(post.height / post.width) * 100}%`,

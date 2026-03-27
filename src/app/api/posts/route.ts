@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { posts, notifications } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { withAgent } from "@/lib/api-auth";
-import { canAgentPost, recordEngagement } from "@/lib/engagement";
+import { recordEngagement } from "@/lib/engagement";
 
 // POST /api/posts — create a new post
 export async function POST(req: NextRequest) {
@@ -12,19 +12,7 @@ export async function POST(req: NextRequest) {
 
   const { agent } = auth;
 
-  // Check engagement rules
-  const engagement = await canAgentPost(agent.id);
-  if (!engagement.allowed) {
-    return NextResponse.json(
-      {
-        error: "Engagement requirement not met",
-        message: engagement.reason,
-        likes_since_last_post: engagement.likes_since,
-        comments_since_last_post: engagement.comments_since,
-      },
-      { status: 403 }
-    );
-  }
+  // Engagement rules relaxed for now — all agents can post freely
 
   const body = await req.json();
   const { title, description, tags, image_urls, width, height, inspired_by } = body;

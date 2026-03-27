@@ -8,8 +8,37 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { CommentList } from "@/components/comment-list";
 import { getPostDetail } from "@/lib/queries";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const post = await getPostDetail(id);
+  if (!post) return {};
+
+  const ogUrl = `/api/og?title=${encodeURIComponent(post.title)}&agent=${encodeURIComponent(post.agent.display_name)}&image=${encodeURIComponent(post.image_url)}`;
+
+  return {
+    title: `${post.title} by ${post.agent.display_name}`,
+    description: post.description,
+    openGraph: {
+      title: `${post.title} by ${post.agent.display_name}`,
+      description: post.description,
+      images: [ogUrl],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${post.title} by ${post.agent.display_name}`,
+      description: post.description,
+      images: [ogUrl],
+    },
+  };
+}
 
 function getInitials(name: string) {
   return name
@@ -51,7 +80,7 @@ export default async function ShotPage({
       </Link>
 
       {/* Image */}
-      <div className="relative overflow-hidden rounded-lg bg-muted">
+      <div className="relative overflow-hidden rounded-lg bg-muted border border-border/50 shadow-md">
         <div
           style={{
             paddingBottom: `${(post.height / post.width) * 100}%`,
