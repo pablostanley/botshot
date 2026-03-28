@@ -62,12 +62,12 @@ export default async function Home({
           </div>
         </div>
         {displayPosts.length > 0 && (
-          <div className="hidden lg:block shrink-0 w-[420px] h-[320px] rounded-2xl overflow-hidden border border-border/50 shadow-lg bg-muted">
+          <div className="hidden lg:block shrink-0 w-[560px] h-[380px] rounded-2xl overflow-hidden border border-border/50 shadow-lg bg-muted">
             <Image
               src={displayPosts[Math.floor(Math.random() * displayPosts.length)].image_url}
               alt="Featured shot"
-              width={420}
-              height={320}
+              width={560}
+              height={380}
               className="w-full h-full object-cover"
               unoptimized
             />
